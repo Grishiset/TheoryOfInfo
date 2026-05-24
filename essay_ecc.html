@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Иммунитет данных — эссе о помехоустойчивом кодировании</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --ink:    #1a1008;
+  --paper:  #f5f0e8;
+  --cream:  #ede7d9;
+  --rust:   #c0392b;
+  --gold:   #b8860b;
+  --teal:   #1a5f6a;
+  --mid:    #6b5a45;
+  --faint:  #d4c9b5;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Lora', Georgia, serif;
+  line-height: 1.75;
+  font-size: 17px;
+}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.6;
+}
+
+/* ── HEADER ── */
+.masthead {
+  background: var(--ink);
+  color: var(--paper);
+  text-align: center;
+  padding: 60px 40px 50px;
+  position: relative;
+  overflow: hidden;
+}
+.masthead::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, var(--rust), var(--gold), var(--teal), var(--rust));
+}
+.kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 20px;
+}
+.masthead h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  font-weight: 900; line-height: 1.1;
+  letter-spacing: -1px;
+}
+.masthead h1 em { font-style: italic; color: var(--gold); }
+.deck {
+  font-family: 'Lora', serif; font-style: italic;
+  font-size: 1.1rem; color: #b0a898;
+  max-width: 560px; margin: 20px auto 0;
+  line-height: 1.6;
+}
+
+/* ── LAYOUT ── */
+.wrapper {
+  max-width: 780px; margin: 0 auto;
+  padding: 0 24px 80px;
+  position: relative; z-index: 1;
+}
+
+/* ── BYLINE ── */
+.byline {
+  border-top: 1px solid var(--faint);
+  border-bottom: 1px solid var(--faint);
+  padding: 14px 0; margin: 40px 0 36px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem; letter-spacing: 2px;
+  color: var(--mid); text-transform: uppercase;
+}
+.byline .tag {
+  background: var(--rust); color: white;
+  padding: 3px 10px; font-size: 0.65rem; letter-spacing: 2px;
+}
+
+/* ── DROPCAP ── */
+.dropcap::first-letter {
+  float: left;
+  font-family: 'Playfair Display', serif;
+  font-size: 5.2rem; font-weight: 900;
+  line-height: 0.8; margin: 8px 14px -4px 0;
+  color: var(--rust);
+}
+
+/* ── BODY TEXT ── */
+p { margin-bottom: 1.4em; }
+
+h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem; font-weight: 700;
+  color: var(--ink); margin: 2.4em 0 0.6em;
+  line-height: 1.2;
+}
+h2::before {
+  content: '';
+  display: block; width: 40px; height: 3px;
+  background: var(--rust); margin-bottom: 10px;
+}
+
+/* ── PULL QUOTE ── */
+.pullquote {
+  margin: 2.4em -40px;
+  padding: 28px 48px;
+  background: var(--cream);
+  border-left: 5px solid var(--rust);
+  position: relative;
+}
+.pullquote p {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.35rem; font-style: italic;
+  color: var(--ink); line-height: 1.45;
+  margin: 0;
+}
+.pullquote cite {
+  display: block; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 2px;
+  color: var(--mid); text-transform: uppercase;
+  font-style: normal;
+}
+
+/* ── FACT BOX ── */
+.factbox {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 28px 32px;
+  margin: 2.4em 0;
+}
+.factbox-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 16px;
+}
+.fact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 20px;
+}
+.fact-item { border-left: 2px solid var(--gold); padding-left: 14px; }
+.fact-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 900;
+  color: var(--gold); line-height: 1;
+}
+.fact-desc {
+  font-size: 0.78rem; color: #b0a898;
+  line-height: 1.4; margin-top: 4px;
+}
+
+/* ── ANALOGY CARD ── */
+.analogy {
+  border: 1px solid var(--faint);
+  border-top: 3px solid var(--teal);
+  padding: 24px 28px; margin: 2.4em 0;
+  position: relative;
+}
+.analogy-label {
+  position: absolute; top: -12px; left: 20px;
+  background: var(--paper);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--teal); padding: 0 8px;
+}
+.analogy p { margin: 0; font-style: italic; color: var(--mid); }
+.analogy strong { color: var(--teal); font-style: normal; }
+
+/* ── APP LIST ── */
+.app-list { list-style: none; margin: 1em 0 1.4em; }
+.app-list li {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 10px 0; border-bottom: 1px solid var(--faint);
+}
+.app-list li:last-child { border-bottom: none; }
+.app-icon {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  background: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  border: 1px solid var(--faint);
+}
+.app-text strong {
+  display: block; font-size: 0.9rem;
+  font-family: 'Lora', serif; font-weight: 600;
+  color: var(--ink); margin-bottom: 2px;
+}
+.app-text span { font-size: 0.85rem; color: var(--mid); }
+
+/* ── CODE INLINE ── */
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8em; background: var(--cream);
+  padding: 2px 6px; border: 1px solid var(--faint);
+  color: var(--rust);
+}
+
+/* ── CLOSING ── */
+.closing {
+  margin-top: 3em;
+  padding-top: 2em;
+  border-top: 2px solid var(--ink);
+}
+.closing p {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem; font-style: italic;
+  color: var(--mid);
+}
+
+/* ── FOOTER ── */
+footer {
+  background: var(--cream);
+  border-top: 1px solid var(--faint);
+  text-align: center;
+  padding: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 2px;
+  color: var(--mid); text-transform: uppercase;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.masthead h1, .deck, .kicker {
+  animation: fadeUp 0.8s ease both;
+}
+.kicker  { animation-delay: 0.1s; }
+.deck    { animation-delay: 0.4s; }
+
+@media (max-width: 600px) {
+  .pullquote { margin: 2em 0; padding: 20px 22px; }
+  .masthead  { padding: 40px 20px 36px; }
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <p class="kicker">Теория информации · Эссе</p>
+  <h1>Иммунитет <em>данных</em></h1>
+  <p class="deck">О том, как математика научила биты выживать в хаосе — и почему это важнее, чем кажется</p>
+</header>
+
+<div class="wrapper">
+
+  <div class="byline">
+    <span>Тема: Помехоустойчивое кодирование</span>
+    <span class="tag">Теория информации</span>
+  </div>
+
+  <p class="dropcap">Каждую секунду ваш смартфон незаметно совершает подвиг. Пока вы листаете ленту или слушаете музыку, тысячи радиоволн пронзают воздух, отражаются от стен, сталкиваются с помехами от микроволновки соседа — и всё равно превращаются в чистый, безошибочный поток данных. Это не магия и не случайность. Это помехоустойчивое кодирование.</p>
+
+  <p>Представьте, что вы передаёте другу важное сообщение через шумную комнату. Половину слов он не расслышит. Опытный человек в такой ситуации говорит медленнее, повторяет ключевые слова, использует простые фразы — интуитивно добавляет <em>избыточность</em>. Именно этим занимается помехоустойчивое кодирование, только вместо слов — биты, вместо шумной комнаты — физический мир с его грозами, царапинами, космическими лучами и электромагнитными помехами.</p>
+
+  <div class="analogy">
+    <span class="analogy-label">Аналогия</span>
+    <p>Представьте почтовую открытку, залитую водой. Часть текста смыта. Но если отправитель догадался написать адрес <strong>дважды</strong> — письмо всё равно дойдёт. Помехоустойчивый код делает то же самое, только математически точно: он добавляет ровно столько «лишней» информации, чтобы восстановить потерянное.</p>
+  </div>
+
+  <h2>Суть: контролируемая избыточность</h2>
+
+  <p>В основе идеи лежит парадокс: чтобы передать <em>меньше</em> ошибок, нужно передать <em>больше</em> данных. К исходному сообщению добавляются специальные контрольные биты, вычисленные по строгим математическим правилам. Получатель, зная эти правила, может не просто заметить, что что-то пошло не так, но и <strong>точно указать</strong>, какой бит повреждён — и исправить его.</p>
+
+  <p>Ричард Хэмминг — один из отцов этой дисциплины — придумал свой знаменитый код в 1950 году из чистого раздражения: перфокарточный компьютер Bell Labs постоянно останавливался из-за ошибок, и Хэмминг устал перезапускать его по выходным. Из бытового неудобства родилась теория, которая сегодня защищает каждый бит данных в вашем телефоне.</p>
+
+  <div class="pullquote">
+    <p>«Если машина может обнаружить ошибку — почему она не может её исправить?»</p>
+    <cite>— Ричард Хэмминг, 1950</cite>
+  </div>
+
+  <p>Фундамент же был заложен ещё раньше — Клодом Шенноном в 1948 году. Его теорема о пропускной способности канала доказала нечто поразительное: <em>всегда существует</em> способ передать информацию через зашумлённый канал с сколь угодно малой вероятностью ошибки — если использовать правильный код. Это была не просто теорема. Это была программа действий для нескольких поколений инженеров.</p>
+
+  <div class="factbox">
+    <div class="factbox-title">// Цифры, которые говорят сами за себя</div>
+    <div class="fact-grid">
+      <div class="fact-item">
+        <div class="fact-num">30%</div>
+        <div class="fact-desc">QR-кода можно закрыть или повредить — он всё равно считается сканером</div>
+      </div>
+      <div class="fact-item">
+        <div class="fact-num">23 млрд</div>
+        <div class="fact-desc">километров до Вояджера-1. Данные приходят без ошибок благодаря кодам</div>
+      </div>
+      <div class="fact-item">
+        <div class="fact-num">4 000</div>
+        <div class="fact-desc">царапин на CD-диске не нарушат воспроизведение — код Рида–Соломона</div>
+      </div>
+      <div class="fact-item">
+        <div class="fact-num">~98%</div>
+        <div class="fact-desc">от теоретического предела Шеннона достигают турбо-коды в сетях 4G</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Где это работает прямо сейчас</h2>
+
+  <p>Помехоустойчивое кодирование — один из тех редких инструментов, что одновременно присутствует и в глубинах космоса, и в кармане каждого горожанина. Вот лишь несколько примеров:</p>
+
+  <ul class="app-list">
+    <li>
+      <div class="app-icon">📡</div>
+      <div class="app-text">
+        <strong>Космические миссии</strong>
+        <span>Марсоход Curiosity передаёт фотографии с расстояния сотен миллионов километров. Мощность сигнала ничтожна, космическое излучение искажает биты — но сверточные коды и турбо-коды восстанавливают каждый пиксель.</span>
+      </div>
+    </li>
+    <li>
+      <div class="app-icon">📱</div>
+      <div class="app-text">
+        <strong>Мобильные сети 4G и 5G</strong>
+        <span>Турбо-коды в LTE и полярные коды в 5G NR позволяют вашему телефону работать в лифте, подвале и в поезде — там, где сигнал слаб и зашумлён. Без них скорость интернета упала бы в разы.</span>
+      </div>
+    </li>
+    <li>
+      <div class="app-icon">💾</div>
+      <div class="app-text">
+        <strong>Твердотельные накопители (SSD)</strong>
+        <span>Каждая ячейка flash-памяти деградирует с каждой записью. Коды BCH и LDPC компенсируют накопленные ошибки, продлевая срок жизни диска с нескольких месяцев до многих лет.</span>
+      </div>
+    </li>
+    <li>
+      <div class="app-icon">🔳</div>
+      <div class="app-text">
+        <strong>QR-коды</strong>
+        <span>Алгоритм Рида–Соломона даёт QR-кодам поразительную живучесть. Именно поэтому компании намеренно рисуют логотипы поверх кодов — и те всё равно работают.</span>
+      </div>
+    </li>
+    <li>
+      <div class="app-icon">🖥️</div>
+      <div class="app-text">
+        <strong>Серверная оперативная память (ECC RAM)</strong>
+        <span>В дата-центрах каждый бит памяти защищён кодом Хэмминга. Космические лучи и тепловые флуктуации способны перевернуть бит в обычной RAM — в ECC это исправляется автоматически, без потери данных.</span>
+      </div>
+    </li>
+    <li>
+      <div class="app-icon">🌐</div>
+      <div class="app-text">
+        <strong>Интернет и сети Wi-Fi</strong>
+        <span>Протоколы TCP/IP используют контрольные суммы для обнаружения ошибок на каждом уровне стека. Стандарты Wi-Fi 802.11ac/ax применяют LDPC-коды, чтобы данные доходили сквозь стены и помехи.</span>
+      </div>
+    </li>
+  </ul>
+
+  <h2>Почему это важно сейчас — больше, чем когда-либо</h2>
+
+  <p>Мы живём в эпоху, когда объём передаваемых данных удваивается каждые несколько лет. Автономные автомобили принимают решения за миллисекунды на основе потоков данных от радаров и камер. Медицинские устройства передают кардиограммы в реальном времени. Промышленные роботы работают в среде с жёсткими электромагнитными помехами. В каждом из этих случаев одиночная ошибка может стоить дорого — а помехоустойчивые коды стоят на страже.</p>
+
+  <p>Показательно, что развитие этой области не остановилось. В 2008 году турбо-коды казались пределом возможного — они достигли 98% от теоретического максимума Шеннона. Но в 2009-м Эрдал Арыкан предложил <em>полярные коды</em> — первые в истории теоретически оптимальные коды, доказательно достигающие предела Шеннона. Сегодня они используются в стандарте 5G NR по всему миру. Теория не стоит на месте.</p>
+
+  <div class="pullquote">
+    <p>Избыточность — это не расточительность. Это цена, которую платит надёжность за право существовать в несовершенном мире.</p>
+  </div>
+
+  <h2>Невидимый фундамент</h2>
+
+  <p>Есть что-то глубоко философское в самой идее помехоустойчивого кодирования. Мир физически несовершенен: электроны прыгают, фотоны рассеиваются, металл царапается, атмосфера шумит. Но математика позволяет построить поверх этого несовершенного мира идеально надёжный информационный слой — если знать, как правильно упаковать смысл в избыточность.</p>
+
+  <p>Каждый раз, когда вы смотрите видео без артефактов, звоните по мобильному без помех или открываете QR-код на мятой этикетке — невидимые математические структуры тихо делают свою работу. Десятки тысяч раз в секунду. Без ошибок.</p>
+
+  <div class="closing">
+    <p>Помехоустойчивое кодирование — это не просто инженерный приём. Это способ мышления: любой реальный канал передачи несовершенен, и задача не в том, чтобы это отрицать, а в том, чтобы заранее подготовиться к ошибкам — и сделать их исправление частью самого сообщения.</p>
+  </div>
+
+</div>
+
+<footer>
+  Теория информации · Помехоустойчивое кодирование · Эссе
+</footer>
+
+</body>
+</html>
