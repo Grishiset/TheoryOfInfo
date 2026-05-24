@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DES Cipher — Интерактивный инструмент</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #060a12;
+  --bg2: #0b1120;
+  --bg3: #0f1829;
+  --surface: #111827;
+  --surface2: #1a2540;
+  --border: #1e2d4a;
+  --border2: #243558;
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.15);
+  --cyan-glow: rgba(0,212,255,0.4);
+  --green: #00ff88;
+  --green-dim: rgba(0,255,136,0.12);
+  --green-glow: rgba(0,255,136,0.35);
+  --red: #ff4455;
+  --red-dim: rgba(255,68,85,0.15);
+  --yellow: #ffd700;
+  --text: #c8d8f0;
+  --text2: #8099be;
+  --text3: #4a6080;
+  --mono: 'JetBrains Mono', monospace;
+  --display: 'Orbitron', sans-serif;
+}
+
+body {
+  font-family: var(--mono);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.04) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(0,255,136,0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+/* ── HEADER ── */
+.header {
+  padding: 40px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.logo-mark {
+  width: 52px;
+  height: 52px;
+  border: 1.5px solid var(--cyan);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan-glow);
+  box-shadow: 0 0 20px var(--cyan-dim), inset 0 0 20px rgba(0,212,255,0.05);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(0,212,255,0.1) 100%);
+}
+
+.header-text h1 {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(0,212,255,0.3);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.header-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  border: 1px solid;
+}
+
+.badge.cyan { background: var(--cyan-dim); color: var(--cyan); border-color: rgba(0,212,255,0.3); }
+.badge.green { background: var(--green-dim); color: var(--green); border-color: rgba(0,255,136,0.25); }
+.badge.yellow { background: rgba(255,215,0,0.1); color: var(--yellow); border-color: rgba(255,215,0,0.25); }
+
+.header-desc {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 10px;
+  letter-spacing: 0.3px;
+}
+
+.header-desc span {
+  color: var(--text3);
+  margin: 0 6px;
+}
+
+/* ── SCANNER LINE ANIMATION ── */
+@keyframes scan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+/* ── TABS ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 9px 18px;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--text3);
+  transition: all 0.2s;
+  white-space: nowrap;
+  position: relative;
+}
+
+.tab:hover:not(.active) {
+  color: var(--text);
+  background: var(--bg3);
+}
+
+.tab.active {
+  background: var(--bg3);
+  color: var(--cyan);
+  border-color: var(--border2);
+  box-shadow: 0 0 12px rgba(0,212,255,0.1);
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background: var(--cyan);
+  border-radius: 1px;
+  box-shadow: 0 0 8px var(--cyan-glow);
+}
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+/* ── MODE ROW ── */
+.mode-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.mode-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  min-width: 70px;
+}
+
+.mode-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all 0.15s;
+}
+
+.mode-btn:hover:not(.sel) { color: var(--text); background: var(--bg3); }
+
+.mode-btn.sel {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  border-color: rgba(0,212,255,0.4);
+  box-shadow: 0 0 12px rgba(0,212,255,0.15);
+}
+
+/* ── FORM FIELDS ── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+.field { margin-bottom: 16px; }
+
+.field label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  resize: vertical;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a6080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.field textarea { min-height: 90px; line-height: 1.6; }
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: none;
+  border-color: rgba(0,212,255,0.5);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.08), 0 0 16px rgba(0,212,255,0.1);
+}
+
+/* ── KEY ROW ── */
+.key-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+.key-row .field { flex: 1; margin-bottom: 0; }
+
+.key-hint {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 6px;
+  letter-spacing: 0.3px;
+}
+
+.key-hint.valid { color: var(--green); }
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.btn:hover { background: var(--surface2); color: #fff; border-color: var(--border2); }
+
+.btn.primary {
+  background: linear-gradient(135deg, #0a2d5a 0%, #0e3d7a 100%);
+  color: var(--cyan);
+  border-color: rgba(0,212,255,0.4);
+  box-shadow: 0 0 16px rgba(0,212,255,0.1);
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, #0e3d7a 0%, #1a54a8 100%);
+  box-shadow: 0 0 24px rgba(0,212,255,0.2);
+}
+
+.btn.success {
+  background: linear-gradient(135deg, #062a1a 0%, #0a3d25 100%);
+  color: var(--green);
+  border-color: rgba(0,255,136,0.3);
+  box-shadow: 0 0 16px rgba(0,255,136,0.08);
+}
+
+.btn.success:hover {
+  box-shadow: 0 0 24px rgba(0,255,136,0.18);
+}
+
+.btn.icon-only {
+  padding: 10px 12px;
+  font-size: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+/* ── RESULT BOXES ── */
+.result-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.result-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--cyan);
+  opacity: 0.6;
+  border-radius: 10px 0 0 10px;
+}
+
+.result-box.green-accent::before { background: var(--green); }
+
+.res-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.res-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.copy-btn {
+  padding: 3px 10px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text3);
+  font-family: var(--mono);
+  transition: all 0.15s;
+}
+
+.copy-btn:hover { color: var(--cyan); border-color: rgba(0,212,255,0.4); }
+
+.result-value {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  word-break: break-all;
+  line-height: 1.8;
+  color: var(--text);
+}
+
+.result-value.hex { color: var(--cyan); }
+
+/* ── STATS GRID ── */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat::after {
+  content: '';
+  position: absolute;
+  top: -20px; right: -20px;
+  width: 60px; height: 60px;
+  background: radial-gradient(circle, rgba(0,212,255,0.06), transparent);
+  pointer-events: none;
+}
+
+.s-label {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+
+.s-val {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--display);
+  color: var(--cyan);
+  text-shadow: 0 0 16px rgba(0,212,255,0.4);
+  line-height: 1;
+}
+
+/* ── ERROR ── */
+.error-box {
+  background: rgba(255,68,85,0.08);
+  border: 1px solid rgba(255,68,85,0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: var(--red);
+  font-size: 12px;
+  margin-bottom: 16px;
+  display: none;
+}
+
+/* ── ROUNDS ── */
+.rounds-header {
+  display: grid;
+  grid-template-columns: 64px 1fr 1fr;
+  gap: 8px;
+  font-size: 9px;
+  color: var(--text3);
+  padding: 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.rounds-grid { display: grid; gap: 4px; }
+
+.round-row {
+  display: grid;
+  grid-template-columns: 64px 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.round-row:hover {
+  border-color: rgba(0,212,255,0.3);
+  background: var(--surface2);
+}
+
+.round-num {
+  font-weight: 700;
+  color: var(--cyan);
+  text-align: center;
+  font-family: var(--display);
+  font-size: 11px;
+}
+
+.round-val {
+  font-family: var(--mono);
+  font-size: 10px;
+  word-break: break-all;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.round-key {
+  font-family: var(--mono);
+  font-size: 10px;
+  word-break: break-all;
+  color: var(--text3);
+}
+
+/* ── S-BOXES ── */
+.sbox-wrap {
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.sbox-title {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--cyan);
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px rgba(0,212,255,0.4);
+}
+
+.sbox-table {
+  border-collapse: collapse;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+
+.sbox-table td, .sbox-table th {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  text-align: center;
+  min-width: 28px;
+}
+
+.sbox-table th {
+  background: var(--surface2);
+  color: var(--text3);
+  font-size: 10px;
+}
+
+.sbox-table td {
+  color: var(--text);
+  transition: all 0.1s;
+}
+
+.sbox-table td:hover {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+}
+
+/* ── FLOW DIAGRAM (About) ── */
+.flow-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin: 16px 0 28px;
+}
+
+.flow-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 12px;
+  text-align: center;
+  width: 260px;
+  color: var(--text);
+  position: relative;
+}
+
+.flow-block.accent {
+  border-color: rgba(0,212,255,0.5);
+  color: var(--cyan);
+  background: var(--cyan-dim);
+  box-shadow: 0 0 16px rgba(0,212,255,0.1);
+}
+
+.flow-block.green {
+  border-color: rgba(0,255,136,0.4);
+  color: var(--green);
+  background: var(--green-dim);
+  box-shadow: 0 0 16px rgba(0,255,136,0.08);
+}
+
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  color: var(--text3);
+  font-size: 18px;
+}
+
+.info-text {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.9;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.info-text b { color: var(--cyan); font-weight: 600; }
+.info-text .green { color: var(--green); }
+
+.sep {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 24px 0;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text3);
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.empty-state .icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.panel.active { animation: fadeIn 0.2s ease; }
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* CBC IV field */
+.iv-field {
+  margin-bottom: 16px;
+  display: none;
+}
+
+/* Small note */
+.note {
+  font-size: 11px;
+  color: var(--text3);
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  border-left: 3px solid var(--text3);
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo-mark">DES</div>
+      <div class="header-text">
+        <h1>DES CIPHER</h1>
+        <div class="header-badges">
+          <span class="badge cyan">56-bit key</span>
+          <span class="badge green">Feistel Network</span>
+          <span class="badge yellow">FIPS PUB 46-3</span>
+        </div>
+        <div class="header-desc">
+          Data Encryption Standard
+          <span>·</span>
+          16 раундов
+          <span>·</span>
+          Блочный шифр 64 бит
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('encrypt')">⚡ Шифрование</button>
+    <button class="tab" onclick="switchTab('decrypt')">🔓 Дешифрование</button>
+    <button class="tab" onclick="switchTab('rounds')">🔄 Раунды Фейстеля</button>
+    <button class="tab" onclick="switchTab('sboxes')">📊 S-блоки</button>
+    <button class="tab" onclick="switchTab('about')">🏗 Архитектура</button>
+  </div>
+
+  <!-- ENCRYPT PANEL -->
+  <div id="panel-encrypt" class="panel active">
+    <div class="mode-row">
+      <span class="mode-label">Режим:</span>
+      <button class="mode-btn sel" id="mode-ecb" onclick="setMode('ECB')">ECB</button>
+      <button class="mode-btn" id="mode-cbc" onclick="setMode('CBC')">CBC</button>
+    </div>
+
+    <div class="key-row">
+      <div class="field" style="margin-bottom:0">
+        <label>Ключ — 8 символов (64 бит)</label>
+        <input type="text" id="enc-key" placeholder="MySecr3t" maxlength="8" value="MySecr3t" oninput="updateKeyHint()">
+        <div class="key-hint valid" id="enc-key-hint">✓ Длина: 8 байт · эффективно 56 бит</div>
+      </div>
+      <button class="btn icon-only" onclick="genKey('enc')" title="Случайный ключ">⟳</button>
+    </div>
+
+    <div class="iv-field" id="cbc-iv-enc">
+      <label>IV — вектор инициализации (8 символов)</label>
+      <input type="text" id="enc-iv" placeholder="InitVect" maxlength="8" value="InitVect">
+    </div>
+
+    <div class="grid2">
+      <div class="field" style="margin-bottom:0">
+        <label>Открытый текст</label>
+        <textarea id="enc-input" placeholder="Введите текст для шифрования...">Привет, мир!</textarea>
+      </div>
+      <div>
+        <div class="field">
+          <label>Формат вывода</label>
+          <select id="enc-format">
+            <option value="hex">HEX</option>
+            <option value="base64">Base64</option>
+            <option value="bin">Бинарный</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Кодировка входа</label>
+          <select id="enc-encoding">
+            <option value="utf8">UTF-8</option>
+            <option value="ascii">ASCII</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" onclick="doEncrypt()">⚡ Зашифровать</button>
+      <button class="btn" onclick="clearEnc()">✕ Очистить</button>
+    </div>
+
+    <div id="enc-error" class="error-box"></div>
+
+    <div id="enc-result" style="display:none">
+      <div class="info-grid" id="enc-stats"></div>
+      <div class="result-box">
+        <div class="res-header">
+          <div class="res-label">Зашифрованный текст</div>
+          <button class="copy-btn" onclick="copyResult('enc-output')">копировать</button>
+        </div>
+        <div class="result-value hex" id="enc-output"></div>
+      </div>
+      <div class="actions" style="margin-bottom:0">
+        <button class="btn" onclick="pasteFromEnc()">→ Передать в дешифрование</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECRYPT PANEL -->
+  <div id="panel-decrypt" class="panel">
+    <div class="mode-row">
+      <span class="mode-label">Режим:</span>
+      <button class="mode-btn sel" id="dmode-ecb" onclick="setDMode('ECB')">ECB</button>
+      <button class="mode-btn" id="dmode-cbc" onclick="setDMode('CBC')">CBC</button>
+    </div>
+
+    <div class="key-row">
+      <div class="field" style="margin-bottom:0">
+        <label>Ключ — 8 символов</label>
+        <input type="text" id="dec-key" placeholder="MySecr3t" maxlength="8" value="MySecr3t">
+      </div>
+      <button class="btn icon-only" onclick="genKey('dec')" title="Случайный ключ">⟳</button>
+    </div>
+
+    <div class="iv-field" id="cbc-iv-dec-wrap">
+      <label>IV — вектор инициализации</label>
+      <input type="text" id="dec-iv" placeholder="InitVect" maxlength="8" value="InitVect">
+    </div>
+
+    <div class="grid2">
+      <div class="field" style="margin-bottom:0">
+        <label>Шифротекст</label>
+        <textarea id="dec-input" placeholder="Вставьте HEX, Base64 или бинарный шифротекст..."></textarea>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>Формат входа</label>
+        <select id="dec-format">
+          <option value="hex">HEX</option>
+          <option value="base64">Base64</option>
+          <option value="bin">Бинарный</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn success" onclick="doDecrypt()">🔓 Дешифровать</button>
+      <button class="btn" onclick="pasteFromEnc()">← Взять из шифрования</button>
+      <button class="btn" onclick="clearDec()">✕ Очистить</button>
+    </div>
+
+    <div id="dec-error" class="error-box"></div>
+
+    <div id="dec-result" style="display:none">
+      <div class="result-box green-accent">
+        <div class="res-header">
+          <div class="res-label">Расшифрованный текст</div>
+          <button class="copy-btn" onclick="copyResult('dec-output')">копировать</button>
+        </div>
+        <div class="result-value" id="dec-output"></div>
+      </div>
+      <div class="result-box">
+        <div class="res-label" style="margin-bottom:8px">HEX байты</div>
+        <div class="result-value hex" id="dec-hex"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROUNDS PANEL -->
+  <div id="panel-rounds" class="panel">
+    <div class="note">Выполните шифрование, чтобы увидеть состояние L/R на каждом раунде Фейстеля.</div>
+    <div id="rounds-container">
+      <div class="empty-state">
+        <div class="icon">🔄</div>
+        Нет данных. Перейдите на вкладку «Шифрование» и зашифруйте текст.
+      </div>
+    </div>
+  </div>
+
+  <!-- SBOXES PANEL -->
+  <div id="panel-sboxes" class="panel">
+    <div class="note">S-блоки — нелинейные таблицы подстановки DES. Каждый блок принимает 6 бит → возвращает 4 бита.</div>
+    <div id="sboxes-container"></div>
+  </div>
+
+  <!-- ABOUT PANEL -->
+  <div id="panel-about" class="panel">
+    <div class="flow-wrap">
+      <div class="flow-block accent">Открытый текст (64 бит)</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-block">Начальная перестановка IP</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-block">Разделение: L₀ ‖ R₀ (по 32 бит)</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-block green">
+        16 раундов Фейстеля<br>
+        <span style="font-size:10px;opacity:0.8">Lᵢ = Rᵢ₋₁ &nbsp;·&nbsp; Rᵢ = Lᵢ₋₁ ⊕ f(Rᵢ₋₁, Kᵢ)</span>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-block">Конкатенация R₁₆ ‖ L₁₆</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-block">Финальная перестановка IP⁻¹</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-block accent">Шифротекст (64 бит)</div>
+    </div>
+
+    <div class="info-text">
+      <b>Функция f(R, K):</b><br>
+      1. Расширяющая перестановка E: 32 → 48 бит<br>
+      2. XOR с подключом Kᵢ (48 бит)<br>
+      3. 8 S-блоков: 48 → 32 бит (нелинейность)<br>
+      4. Перестановка P: 32 → 32 бит<br><br>
+      <b>Генерация ключей (Key Schedule):</b><br>
+      64-битный ключ → PC-1 (56 бит) → 16 раздвиговых циклов → PC-2 (48 бит) на раунд<br><br>
+      <b>Режимы работы:</b><br>
+      <span class="green">ECB:</span> каждый блок шифруется независимо — Cᵢ = E(Pᵢ)<br>
+      <span class="green">CBC:</span> цепочка блоков — Cᵢ = E(Pᵢ ⊕ Cᵢ₋₁), первый блок XOR с IV
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PC1=[57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4];
+const PC2=[14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32];
+const IP=[58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7];
+const IP_INV=[40,8,48,16,56,24,64,32,39,7,47,15,55,23,63,31,38,6,46,14,54,22,62,30,37,5,45,13,53,21,61,29,36,4,44,12,52,20,60,28,35,3,43,11,51,19,59,27,34,2,42,10,50,18,58,26,33,1,41,9,49,17,57,25];
+const E=[32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,24,25,26,27,28,29,28,29,30,31,32,1];
+const P=[16,7,20,21,29,12,28,17,1,15,23,26,5,18,31,10,2,8,24,14,32,27,3,9,19,13,30,6,22,11,4,25];
+const SHIFTS=[1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1];
+const SBOXES=[
+  [[14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7],[0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8],[4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0],[15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13]],
+  [[15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10],[3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5],[0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15],[13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9]],
+  [[10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8],[13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1],[13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7],[1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12]],
+  [[7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15],[13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9],[10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4],[3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14]],
+  [[2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9],[14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6],[4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14],[11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3]],
+  [[12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11],[10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8],[9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6],[4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13]],
+  [[4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1],[13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6],[1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2],[6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12]],
+  [[13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7],[1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2],[7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8],[2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]]
+];
+
+let lastEncResult=null,lastEncKey=null,lastEncFormat='hex',encMode='ECB',decMode='ECB';
+let roundsLog=[];
+
+function permute(bits,table){return table.map(p=>bits[p-1])}
+function bytesToBits(bytes){const b=[];for(const byte of bytes){for(let i=7;i>=0;i--)b.push((byte>>i)&1)}return b}
+function bitsToBytes(bits){const bytes=[];for(let i=0;i<bits.length;i+=8){let v=0;for(let j=0;j<8;j++)v=(v<<1)|bits[i+j];bytes.push(v)}return bytes}
+function xorBits(a,b){return a.map((v,i)=>v^b[i])}
+function rotLeft(arr,n){return [...arr.slice(n),...arr.slice(0,n)]}
+function bitsToHex(bits){return bitsToBytes(bits).map(b=>b.toString(16).padStart(2,'0')).join('')}
+
+function generateSubkeys(keyBytes){
+  const keyBits=bytesToBits(keyBytes);
+  const pc1=permute(keyBits,PC1);
+  let C=pc1.slice(0,28),D=pc1.slice(28);
+  const subkeys=[];
+  for(let i=0;i<16;i++){C=rotLeft(C,SHIFTS[i]);D=rotLeft(D,SHIFTS[i]);subkeys.push(permute([...C,...D],PC2));}
+  return subkeys;
+}
+
+function feistel(R,K){
+  const expanded=permute(R,E);
+  const xored=xorBits(expanded,K);
+  const sOut=[];
+  for(let i=0;i<8;i++){
+    const blk=xored.slice(i*6,i*6+6);
+    const row=(blk[0]<<1)|blk[5];
+    const col=(blk[1]<<3)|(blk[2]<<2)|(blk[3]<<1)|blk[4];
+    const val=SBOXES[i][row][col];
+    for(let j=3;j>=0;j--)sOut.push((val>>j)&1);
+  }
+  return permute(sOut,P);
+}
+
+function desBlock(blockBytes,subkeys,log){
+  const bits=bytesToBits(blockBytes);
+  const ipBits=permute(bits,IP);
+  let L=ipBits.slice(0,32),R=ipBits.slice(32);
+  if(log){log.push({round:'IP',L:bitsToHex(L),R:bitsToHex(R),K:'-'})}
+  for(let i=0;i<16;i++){
+    const newL=R;
+    const f=feistel(R,subkeys[i]);
+    const newR=xorBits(L,f);
+    L=newL;R=newR;
+    if(log)log.push({round:i+1,L:bitsToHex(L),R:bitsToHex(R),K:bitsToHex(subkeys[i])});
+  }
+  return bitsToBytes(permute([...R,...L],IP_INV));
+}
+
+function desEncryptBlock(blockBytes,subkeys,log){return desBlock(blockBytes,subkeys,log)}
+function desDecryptBlock(blockBytes,subkeys){return desBlock(blockBytes,[...subkeys].reverse(),null)}
+
+function padBytes(bytes){const pad=8-(bytes.length%8);return [...bytes,...Array(pad).fill(pad)];}
+function unpadBytes(bytes){if(!bytes.length)return bytes;const pad=bytes[bytes.length-1];if(pad<1||pad>8)return bytes;return bytes.slice(0,-pad);}
+
+function encryptECB(plainBytes,subkeys){
+  const padded=padBytes(plainBytes);const out=[];
+  for(let i=0;i<padded.length;i+=8){const block=padded.slice(i,i+8);const log=(i===0)?[]:null;const enc=desEncryptBlock(block,subkeys,log);if(i===0)roundsLog=log;out.push(...enc);}
+  return out;
+}
+function decryptECB(cipherBytes,subkeys){const out=[];for(let i=0;i<cipherBytes.length;i+=8)out.push(...desDecryptBlock(cipherBytes.slice(i,i+8),subkeys));return unpadBytes(out);}
+
+function encryptCBC(plainBytes,subkeys,ivBytes){
+  const padded=padBytes(plainBytes);const out=[];let prev=ivBytes;
+  for(let i=0;i<padded.length;i+=8){const block=padded.slice(i,i+8).map((b,j)=>b^prev[j]);const enc=desEncryptBlock(block,subkeys,null);out.push(...enc);prev=enc;}
+  return out;
+}
+function decryptCBC(cipherBytes,subkeys,ivBytes){
+  const out=[];let prev=ivBytes;
+  for(let i=0;i<cipherBytes.length;i+=8){const block=cipherBytes.slice(i,i+8);const dec=desDecryptBlock(block,subkeys).map((b,j)=>b^prev[j]);out.push(...dec);prev=block;}
+  return unpadBytes(out);
+}
+
+function strToBytes(str,enc){if(enc==='ascii')return Array.from(str).map(c=>c.charCodeAt(0)&0xFF);return Array.from(new TextEncoder().encode(str));}
+function bytesToStr(bytes){try{return new TextDecoder().decode(new Uint8Array(bytes))}catch{return bytes.map(b=>String.fromCharCode(b)).join('')}}
+function bytesToHex(bytes){return bytes.map(b=>b.toString(16).padStart(2,'0')).join('')}
+function hexToBytes(hex){hex=hex.replace(/\s/g,'');const b=[];for(let i=0;i<hex.length;i+=2)b.push(parseInt(hex.substr(i,2),16));return b}
+function bytesToBase64(bytes){return btoa(String.fromCharCode(...bytes))}
+function base64ToBytes(b64){return Array.from(atob(b64)).map(c=>c.charCodeAt(0))}
+function bytesToBin(bytes){return bytes.map(b=>b.toString(2).padStart(8,'0')).join(' ')}
+function binToBytes(bin){return bin.replace(/\s/g,'').match(/.{8}/g).map(b=>parseInt(b,2))}
+
+function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+function hideError(id){document.getElementById(id).style.display='none';}
+
+function doEncrypt(){
+  hideError('enc-error');document.getElementById('enc-result').style.display='none';roundsLog=[];
+  const keyStr=document.getElementById('enc-key').value;
+  if(keyStr.length!==8){showError('enc-error','Ключ должен быть ровно 8 символов (64 бит).');return}
+  const plainStr=document.getElementById('enc-input').value;
+  if(!plainStr){showError('enc-error','Введите текст для шифрования.');return}
+  const enc=document.getElementById('enc-encoding').value;
+  const fmt=document.getElementById('enc-format').value;
+  const keyBytes=strToBytes(keyStr,'ascii');
+  const plainBytes=strToBytes(plainStr,enc);
+  const subkeys=generateSubkeys(keyBytes);
+  let cipherBytes;
+  if(encMode==='CBC'){
+    const ivStr=document.getElementById('enc-iv').value;
+    if(ivStr.length!==8){showError('enc-error','IV должен быть ровно 8 символов.');return}
+    cipherBytes=encryptCBC(plainBytes,subkeys,strToBytes(ivStr,'ascii'));
+  }else{cipherBytes=encryptECB(plainBytes,subkeys);}
+  lastEncResult=cipherBytes;lastEncKey=keyStr;lastEncFormat=fmt;
+  let output='';
+  if(fmt==='hex')output=bytesToHex(cipherBytes);
+  else if(fmt==='base64')output=bytesToBase64(cipherBytes);
+  else output=bytesToBin(cipherBytes);
+  document.getElementById('enc-output').textContent=output;
+  document.getElementById('enc-stats').innerHTML=`
+    <div class="stat"><div class="s-label">Входных байт</div><div class="s-val">${plainBytes.length}</div></div>
+    <div class="stat"><div class="s-label">Блоков (8 байт)</div><div class="s-val">${Math.ceil(plainBytes.length/8)}</div></div>
+    <div class="stat"><div class="s-label">Выходных байт</div><div class="s-val">${cipherBytes.length}</div></div>
+    <div class="stat"><div class="s-label">Режим</div><div class="s-val">${encMode}</div></div>
+  `;
+  document.getElementById('enc-result').style.display='block';
+  renderRounds();
+}
+
+function doDecrypt(){
+  hideError('dec-error');document.getElementById('dec-result').style.display='none';
+  const keyStr=document.getElementById('dec-key').value;
+  if(keyStr.length!==8){showError('dec-error','Ключ должен быть ровно 8 символов.');return}
+  const inputStr=document.getElementById('dec-input').value.trim();
+  if(!inputStr){showError('dec-error','Введите шифротекст.');return}
+  const fmt=document.getElementById('dec-format').value;
+  let cipherBytes;
+  try{if(fmt==='hex')cipherBytes=hexToBytes(inputStr);else if(fmt==='base64')cipherBytes=base64ToBytes(inputStr);else cipherBytes=binToBytes(inputStr);}
+  catch(e){showError('dec-error','Ошибка разбора: '+e.message);return}
+  if(cipherBytes.length%8!==0){showError('dec-error','Длина шифротекста должна быть кратна 8 байтам.');return}
+  const subkeys=generateSubkeys(strToBytes(keyStr,'ascii'));
+  let plainBytes;
+  if(decMode==='CBC'){
+    const ivStr=document.getElementById('dec-iv').value;
+    if(ivStr.length!==8){showError('dec-error','IV должен быть ровно 8 символов.');return}
+    plainBytes=decryptCBC(cipherBytes,subkeys,strToBytes(ivStr,'ascii'));
+  }else{plainBytes=decryptECB(cipherBytes,subkeys);}
+  document.getElementById('dec-output').textContent=bytesToStr(plainBytes);
+  document.getElementById('dec-hex').textContent=bytesToHex(plainBytes);
+  document.getElementById('dec-result').style.display='block';
+}
+
+function renderRounds(){
+  const c=document.getElementById('rounds-container');
+  if(!roundsLog.length){c.innerHTML='<div class="empty-state"><div class="icon">🔄</div>Нет данных.</div>';return}
+  let html='<div class="rounds-header"><span>Раунд</span><span>L / R (32 бит)</span><span>Подключ K (48 бит)</span></div><div class="rounds-grid">';
+  for(const r of roundsLog){
+    html+=`<div class="round-row"><div class="round-num">${r.round}</div><div class="round-val">${r.L}<br><span style="color:var(--text3)">R: </span>${r.R}</div><div class="round-key">${r.K}</div></div>`;
+  }
+  html+='</div>';
+  c.innerHTML=html;
+}
+
+function renderSboxes(){
+  const c=document.getElementById('sboxes-container');
+  let html='';
+  for(let s=0;s<8;s++){
+    html+=`<div class="sbox-wrap"><div class="sbox-title">S-box ${s+1}</div><table class="sbox-table"><tr><th></th>`;
+    for(let col=0;col<16;col++)html+=`<th>${col.toString(16).toUpperCase()}</th>`;
+    html+='</tr>';
+    for(let row=0;row<4;row++){html+=`<tr><th>${row}</th>`;for(let col=0;col<16;col++)html+=`<td>${SBOXES[s][row][col]}</td>`;html+='</tr>';}
+    html+='</table></div>';
+  }
+  c.innerHTML=html;
+}
+
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>{const ids=['encrypt','decrypt','rounds','sboxes','about'];t.classList.toggle('active',ids[i]===id)});
+  document.querySelectorAll('.panel').forEach(p=>{p.classList.remove('active')});
+  document.getElementById('panel-'+id).classList.add('active');
+  if(id==='rounds')renderRounds();
+  if(id==='sboxes')renderSboxes();
+}
+
+function setMode(m){
+  encMode=m;
+  document.getElementById('mode-ecb').classList.toggle('sel',m==='ECB');
+  document.getElementById('mode-cbc').classList.toggle('sel',m==='CBC');
+  document.getElementById('cbc-iv-enc').style.display=m==='CBC'?'block':'none';
+}
+function setDMode(m){
+  decMode=m;
+  document.getElementById('dmode-ecb').classList.toggle('sel',m==='ECB');
+  document.getElementById('dmode-cbc').classList.toggle('sel',m==='CBC');
+  document.getElementById('cbc-iv-dec-wrap').style.display=m==='CBC'?'block':'none';
+}
+
+function genKey(target){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+  const k=Array.from({length:8},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  document.getElementById(target+'-key').value=k;
+  if(target==='enc')updateKeyHint();
+}
+
+function updateKeyHint(){
+  const k=document.getElementById('enc-key').value;
+  const h=document.getElementById('enc-key-hint');
+  if(k.length===8){h.textContent='✓ Длина: 8 байт · эффективно 56 бит';h.className='key-hint valid';}
+  else{h.textContent=`Длина: ${k.length}/8 символов`;h.className='key-hint';}
+}
+
+function clearEnc(){document.getElementById('enc-input').value='';document.getElementById('enc-result').style.display='none';hideError('enc-error');}
+function clearDec(){document.getElementById('dec-input').value='';document.getElementById('dec-result').style.display='none';hideError('dec-error');}
+
+function pasteFromEnc(){
+  if(!lastEncResult){return}
+  document.getElementById('dec-input').value=lastEncFormat==='hex'?bytesToHex(lastEncResult):lastEncFormat==='base64'?bytesToBase64(lastEncResult):bytesToBin(lastEncResult);
+  document.getElementById('dec-format').value=lastEncFormat;
+  if(lastEncKey)document.getElementById('dec-key').value=lastEncKey;
+  switchTab('decrypt');
+}
+
+function copyResult(id){
+  const text=document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.querySelector(`[onclick="copyResult('${id}')"]`);
+    if(btn){btn.textContent='✓ скопировано';setTimeout(()=>{btn.textContent='копировать'},1500);}
+  }).catch(()=>{});
+}
+</script>
+</body>
+</html>
